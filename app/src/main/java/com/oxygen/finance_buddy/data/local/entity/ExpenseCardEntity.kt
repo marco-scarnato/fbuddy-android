@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class ExpenseCardEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
+    val iconKey: String = "wallet",
     val createdAt: Long,
     val updatedAt: Long
 )

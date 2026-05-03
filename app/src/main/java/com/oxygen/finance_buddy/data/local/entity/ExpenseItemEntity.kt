@@ -15,7 +15,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["cardId"])]
+    indices = [Index(value = ["cardId"]), Index(value = ["recurringParentId"])]
 )
 data class ExpenseItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -23,5 +23,9 @@ data class ExpenseItemEntity(
     val expenseDate: Long,
     val amount: Double,
     val note: String?,
-    val createdAt: Long
+    val createdAt: Long,
+    val isRecurringTemplate: Boolean = false,
+    val recurringParentId: Int? = null,
+    val recurrenceMonths: Int = 1,
+    val nextRenewalDate: Long? = null
 )

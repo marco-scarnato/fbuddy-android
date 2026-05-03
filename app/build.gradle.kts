@@ -72,6 +72,7 @@ dependencies {
     // DataStore & Biometric
     implementation(libs.datastore.preferences)
     implementation(libs.biometric)
+    implementation(libs.androidx.fragment.ktx)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)

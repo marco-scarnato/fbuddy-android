@@ -1,5 +1,6 @@
 package com.oxygen.finance_buddy.ui.conti
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.oxygen.finance_buddy.data.local.entity.AccountStateEntity
@@ -21,10 +22,17 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ContiViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val repository: AccountStateRepository
 ) : ViewModel() {
 
-    private val _selectedDate = MutableStateFlow(System.currentTimeMillis())
+    private companion object {
+        const val KEY_SELECTED_DATE = "conti_selected_date"
+    }
+
+    private val _selectedDate = MutableStateFlow(
+        savedStateHandle.get<Long>(KEY_SELECTED_DATE) ?: System.currentTimeMillis()
+    )
     val selectedDate: StateFlow<Long> = _selectedDate
 
     val currentAccountState: StateFlow<AccountStateEntity?> = _selectedDate
@@ -54,6 +62,7 @@ class ContiViewModel @Inject constructor(
 
     fun setSelectedDate(date: Long) {
         _selectedDate.value = date
+        savedStateHandle[KEY_SELECTED_DATE] = date
     }
 
     fun saveAccountState(payload: AccountStatePayload, id: Int = 0) {

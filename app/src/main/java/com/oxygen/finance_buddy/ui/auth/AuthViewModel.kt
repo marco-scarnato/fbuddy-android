@@ -17,6 +17,7 @@ class AuthViewModel @Inject constructor(
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
     val authState: StateFlow<AuthState> = _authState
+    val biometricEnabled = securityPreferences.isBiometricEnabled
 
     init {
         checkInitialState()

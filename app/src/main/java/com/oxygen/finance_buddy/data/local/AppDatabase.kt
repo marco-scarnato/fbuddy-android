@@ -16,7 +16,7 @@ import com.oxygen.finance_buddy.data.local.entity.ExpenseItemEntity
         ExpenseCardEntity::class,
         ExpenseItemEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(DatabaseConverters::class)

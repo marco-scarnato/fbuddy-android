@@ -7,11 +7,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.oxygen.finance_buddy.R
 
@@ -21,7 +25,35 @@ fun AuthScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.authState.collectAsState()
+    val biometricEnabled by viewModel.biometricEnabled.collectAsState(initial = false)
+    val context = LocalContext.current
     var pinText by remember { mutableStateOf("") }
+
+    val biometricPrompt = remember(context) {
+        val activity = context as? FragmentActivity
+        if (activity == null) {
+            null
+        } else {
+            val executor = ContextCompat.getMainExecutor(activity)
+            BiometricPrompt(
+                activity,
+                executor,
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        viewModel.bypassAuth()
+                    }
+                }
+            )
+        }
+    }
+
+    val promptInfo = remember {
+        BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Accedi con biometria")
+            .setSubtitle("Usa impronta o volto per entrare")
+            .setNegativeButtonText("Annulla")
+            .build()
+    }
     
     LaunchedEffect(state) {
         if (state is AuthState.Success) {
@@ -91,6 +123,11 @@ fun AuthScreen(
                     )
                     Button(onClick = { viewModel.verifyPin(pinText) }) {
                         Text("Accedi")
+                    }
+                    if (biometricEnabled && biometricPrompt != null) {
+                        OutlinedButton(onClick = { biometricPrompt.authenticate(promptInfo) }) {
+                            Text("Usa biometria")
+                        }
                     }
                 }
             }

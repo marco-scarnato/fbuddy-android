@@ -17,16 +17,23 @@ class SpeseViewModel @Inject constructor(
     private val repository: ExpenseRepository
 ) : ViewModel() {
 
+    init {
+        viewModelScope.launch {
+            repository.generateDueRecurringExpenses()
+        }
+    }
+
     val expenseCards: StateFlow<List<ExpenseCardEntity>> = repository.getAllExpenseCards()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allExpenseItems: StateFlow<List<ExpenseItemEntity>> = repository.getAllExpenseItems()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addExpenseCard(name: String) {
+    fun addExpenseCard(name: String, iconKey: String = "wallet") {
         viewModelScope.launch {
             val card = ExpenseCardEntity(
                 name = name,
+                iconKey = iconKey,
                 createdAt = System.currentTimeMillis(),
                 updatedAt = System.currentTimeMillis()
             )

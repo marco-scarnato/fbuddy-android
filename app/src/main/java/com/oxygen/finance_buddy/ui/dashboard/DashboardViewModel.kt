@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -19,6 +20,17 @@ class DashboardViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository
 ) : ViewModel() {
 
+    init {
+        viewModelScope.launch {
+            try {
+                expenseRepository.generateDueRecurringExpenses()
+            } catch (e: Exception) {
+                // Log error but don't crash the app
+                e.printStackTrace()
+            }
+        }
+    }
+
     val accountStates: StateFlow<List<AccountStateEntity>> = accountStateRepository.getAllAccountStates()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -26,5 +38,8 @@ class DashboardViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allExpenseItems: StateFlow<List<ExpenseItemEntity>> = expenseRepository.getAllExpenseItems()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val recurringExpenseTemplates: StateFlow<List<ExpenseItemEntity>> = expenseRepository.getRecurringExpenseTemplates()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 }

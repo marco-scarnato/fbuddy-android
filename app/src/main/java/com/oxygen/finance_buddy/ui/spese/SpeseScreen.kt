@@ -3,10 +3,12 @@ package com.oxygen.finance_buddy.ui.spese
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -33,6 +35,7 @@ fun SpeseScreen(
 ) {
     val cards by viewModel.expenseCards.collectAsState()
     val allExpenses by viewModel.allExpenseItems.collectAsState()
+    val iconOptions = remember { expenseCardIconOptions() }
 
     val currentMonthExpenses = remember(allExpenses) {
         val cal = Calendar.getInstance()
@@ -59,6 +62,7 @@ fun SpeseScreen(
 
     var showDialog by remember { mutableStateOf(false) }
     var cardName by remember { mutableStateOf("") }
+    var selectedIconKey by remember { mutableStateOf(iconOptions.first().key) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Carte Spesa") }) },
@@ -73,18 +77,36 @@ fun SpeseScreen(
                 onDismissRequest = { showDialog = false },
                 title = { Text("Nuova Carta Spesa") },
                 text = {
-                    OutlinedTextField(
-                        value = cardName,
-                        onValueChange = { cardName = it },
-                        label = { Text("Nome della Carta") },
-                        singleLine = true
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = cardName,
+                            onValueChange = { cardName = it },
+                            label = { Text("Nome della categoria") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text("Icona", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            iconOptions.forEach { option ->
+                                FilterChip(
+                                    selected = selectedIconKey == option.key,
+                                    onClick = { selectedIconKey = option.key },
+                                    label = { Text(option.label) },
+                                    leadingIcon = { Icon(option.icon, contentDescription = option.label) }
+                                )
+                            }
+                        }
+                    }
                 },
                 confirmButton = {
                     TextButton(onClick = {
                         if (cardName.isNotBlank()) {
-                            viewModel.addExpenseCard(cardName)
+                            viewModel.addExpenseCard(cardName, selectedIconKey)
                             cardName = ""
+                            selectedIconKey = iconOptions.first().key
                             showDialog = false
                         }
                     }) {
@@ -181,7 +203,11 @@ fun SpeseScreen(
                 items(cards) { card ->
                     Card(modifier = Modifier.fillMaxWidth().clickable { onCardClick(card.id) }) {
                         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(card.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(expenseCardIconOption(card.iconKey).icon, contentDescription = card.name, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(card.name, style = MaterialTheme.typography.titleMedium)
+                            }
 
                             val cardTotal = allExpenses.filter { it.cardId == card.id }.sumOf { it.amount }
                             if(cardTotal > 0) {

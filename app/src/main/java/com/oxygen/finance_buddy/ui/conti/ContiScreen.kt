@@ -48,6 +48,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -71,8 +73,15 @@ fun ContiScreen(
     val currentState by viewModel.currentAccountState.collectAsState()
     val latestState by viewModel.latestAccountState.collectAsState()
 
-    var cashRows by remember { mutableStateOf(listOf<EditableCashRow>()) }
-    var accounts by remember { mutableStateOf(listOf<EditableAccount>()) }
+    val cashRowsState = rememberSaveable(saver = CashRowsStateSaver) {
+        mutableStateOf(emptyList<EditableCashRow>())
+    }
+    var cashRows by cashRowsState
+
+    val accountsState = rememberSaveable(saver = AccountsStateSaver) {
+        mutableStateOf(emptyList<EditableAccount>())
+    }
+    var accounts by accountsState
 
     var isDatePickerVisible by remember { mutableStateOf(false) }
     var cashExpanded by remember { mutableStateOf(true) }
@@ -81,15 +90,18 @@ fun ContiScreen(
         listOf("#43A047", "#1E88E5", "#F4511E", "#8E24AA", "#00897B", "#F9A825")
     }
 
-    // Sync with state (fallback to latest snapshot so accounts persist across dates)
+    // Seed from database only when we have a snapshot for the selected date.
+    // If the selected date has no snapshot yet, keep the current draft so edits are not lost.
     LaunchedEffect(currentState, latestState) {
-        val source = currentState ?: latestState
+        val source = currentState ?: if (cashRows.isEmpty() && accounts.isEmpty()) latestState else null
         if (source != null) {
             cashRows = source.statePayload.cashRows.map { it.toEditable() }
             accounts = source.statePayload.accounts.map { it.toEditable() }
         } else {
-            cashRows = emptyList()
-            accounts = emptyList()
+            if (cashRows.isEmpty() && accounts.isEmpty()) {
+                cashRows = emptyList()
+                accounts = emptyList()
+            }
         }
     }
 
@@ -341,6 +353,51 @@ private fun EditableAccount.toDomain(): Account = Account(
     balance = balanceOrZero(),
     color = color
 )
+
+private val CashRowsStateSaver: Saver<androidx.compose.runtime.MutableState<List<EditableCashRow>>, ArrayList<ArrayList<Any?>>> =
+    Saver(
+        save = { state ->
+            ArrayList(
+                state.value.map { row ->
+                    arrayListOf(row.label, row.valueText, row.countText)
+                }
+            )
+        },
+        restore = { restored ->
+            mutableStateOf(
+                restored.map { row ->
+                    EditableCashRow(
+                        label = row[0] as String,
+                        valueText = row[1] as String,
+                        countText = row[2] as String
+                    )
+                }
+            )
+        }
+    )
+
+private val AccountsStateSaver: Saver<androidx.compose.runtime.MutableState<List<EditableAccount>>, ArrayList<ArrayList<Any?>>> =
+    Saver(
+        save = { state ->
+            ArrayList(
+                state.value.map { account ->
+                    arrayListOf(account.id, account.name, account.balanceText, account.color)
+                }
+            )
+        },
+        restore = { restored ->
+            mutableStateOf(
+                restored.map { account ->
+                    EditableAccount(
+                        id = account[0] as Int,
+                        name = account[1] as String,
+                        balanceText = account[2] as String,
+                        color = account[3] as String
+                    )
+                }
+            )
+        }
+    )
 
 private fun String.toDoubleOrNullSafe(): Double =
     replace(',', '.').toDoubleOrNull() ?: 0.0

@@ -26,8 +26,10 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -60,6 +62,8 @@ fun SpeseDetailScreen(
     var amountText by remember { mutableStateOf("") }
     var noteText by remember { mutableStateOf("") }
     var selectedDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    var isRecurring by remember { mutableStateOf(false) }
+    var recurrenceMonths by remember { mutableStateOf(1) }
 
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -127,6 +131,36 @@ fun SpeseDetailScreen(
                             label = { Text("Nota (Opzionale)") },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Abbonamento", fontWeight = FontWeight.SemiBold)
+                                Text("Ripeti automaticamente questa spesa", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Switch(checked = isRecurring, onCheckedChange = { isRecurring = it })
+                        }
+                        if (isRecurring) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = recurrenceMonths == 1,
+                                    onClick = { recurrenceMonths = 1 },
+                                    label = { Text("Mensile") }
+                                )
+                                FilterChip(
+                                    selected = recurrenceMonths == 3,
+                                    onClick = { recurrenceMonths = 3 },
+                                    label = { Text("Trimestrale") }
+                                )
+                                FilterChip(
+                                    selected = recurrenceMonths == 12,
+                                    onClick = { recurrenceMonths = 12 },
+                                    label = { Text("Annuale") }
+                                )
+                            }
+                        }
                         TextButton(
                             onClick = { showDatePicker = true },
                             modifier = Modifier.fillMaxWidth()
@@ -137,11 +171,14 @@ fun SpeseDetailScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        val amount = amountText.toDoubleOrNull()
+                        // Support both . and , as decimal separator
+                        val amount = amountText.replace(",", ".").toDoubleOrNull()
                         if (amount != null && amount > 0) {
-                            viewModel.addExpenseItem(amount, noteText, selectedDateMillis)
+                            viewModel.addExpenseItem(amount, noteText, selectedDateMillis, isRecurring, recurrenceMonths)
                             amountText = ""
                             noteText = ""
+                            isRecurring = false
+                            recurrenceMonths = 1
                             showDialog = false
                         }
                     }) {
@@ -172,6 +209,9 @@ fun SpeseDetailScreen(
                         Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(item.note ?: "Nessuna nota", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                                if (item.isRecurringTemplate) {
+                                    Text("Abbonamento ${recurringLabel(item.recurrenceMonths)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                }
                                 Text(dateStr, style = MaterialTheme.typography.bodySmall)
                             }
                             Text("€ ${item.amount}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
